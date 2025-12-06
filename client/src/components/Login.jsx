@@ -56,7 +56,7 @@ const LoginModal = ({ onClose, openRegister }) => {
 
     try {
       // 2️⃣ API CALL
-      const res = await axios.post("http://localhost:8000/auth/login", {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, {
         email: formData.email,
         password: formData.password,
       });

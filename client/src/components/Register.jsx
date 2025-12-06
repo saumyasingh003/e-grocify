@@ -60,7 +60,7 @@ const RegisterModal = ({ onClose, openLogin }) => {
 
     try {
       // 2️⃣ Backend API CALL
-      const res = await axios.post("http://localhost:8000/auth/register", {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, {
         name: formData.fullName,
         email: formData.email,
         password: formData.password,
