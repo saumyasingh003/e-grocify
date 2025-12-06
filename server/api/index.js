@@ -18,13 +18,17 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "*",
   credentials: true
 }));
 app.use(express.json());
 
 // Routes
 app.get("/", (req, res) => {
+  res.send("API is running...");
+});
+
+app.get("/api", (req, res) => {
   res.send("API is running...");
 });
 
@@ -35,8 +39,15 @@ app.use("/recomm", recommendationRoutes);
 app.use("/cart", cartRoutes);
 app.use("/orders", orderRoutes);
 
-// Error Handling Middleware (Correct Position)
+// Error Handling Middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// For local development only
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+}
+
+// Export for Vercel serverless
+export default app;
+

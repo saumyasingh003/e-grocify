@@ -5,7 +5,7 @@ import {
   updateQuantity,
   getMyCart,
 } from "../Controllers/cart.js";
-import { protect } from "../middleware/auth.js";
+import { protect } from "../Middleware/auth.js";
 
 const router = express.Router();
 

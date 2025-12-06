@@ -4,7 +4,7 @@ import {
   getOrderHistory,
   getOrderById,
 } from "../Controllers/order.js";
-import { protect } from "../middleware/auth.js";
+import { protect } from "../Middleware/auth.js";
 
 const router = express.Router();
 
