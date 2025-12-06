@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -12,11 +12,23 @@ import {
   faLock,
   faXmark,
   faCheckCircle,
-  faSpinner
+  faSpinner,
+  faHistory,
+  faBox
 } from "@fortawesome/free-solid-svg-icons";
 
 const Cart = () => {
-  const { cart, cartTotal, updateQty, deleteItem, cartCount } = useCart();
+  const {
+    cart,
+    cartTotal,
+    updateQty,
+    deleteItem,
+    cartCount,
+    checkout,
+    orderHistory,
+    loadingHistory,
+    fetchOrderHistory
+  } = useCart();
   const navigate = useNavigate();
 
   // Payment Modal States
@@ -31,6 +43,11 @@ const Cart = () => {
   });
 
   const totalQty = cart?.reduce((acc, item) => acc + item.quantity, 0);
+
+  // Fetch order history on mount
+  useEffect(() => {
+    fetchOrderHistory();
+  }, []);
 
   // Format card number with spaces
   const formatCardNumber = (value) => {
@@ -68,42 +85,50 @@ const Cart = () => {
     }
   };
 
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+
+
   // Handle payment submission
   const handlePayment = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Call checkout which creates order and clears cart
+      await checkout();
 
-    setIsProcessing(false);
-    setPaymentSuccess(true);
+      setIsProcessing(false);
+      setPaymentSuccess(true);
 
-    // Redirect after success
-    setTimeout(() => {
-      navigate("/");
-    }, 2000);
+      // Reset form
+      setCardData({
+        cardNumber: "",
+        expiry: "",
+        cvv: "",
+        name: ""
+      });
+
+      // Close modal and stay on cart page to show order history
+      setTimeout(() => {
+        setShowPayment(false);
+        setPaymentSuccess(false);
+      }, 2500);
+    } catch (error) {
+      setIsProcessing(false);
+      alert("Payment failed. Please try again.");
+    }
   };
-
-  if (cart?.length === 0) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa]">
-        <FontAwesomeIcon icon={faCartShopping} className="text-9xl text-gray-200 mb-6" />
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">
-          Your Cart is Empty
-        </h2>
-        <p className="text-gray-500 mb-8">
-          Looks like you haven't added anything to your cart yet.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-[#be5b4c] text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-[#a0493d] transition-all"
-        >
-          Start Shopping
-        </button>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -117,110 +142,208 @@ const Cart = () => {
               <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
             </button>
             <div className="text-xl font-extrabold text-gray-900">
-              Shopping Cart <span className="text-lg text-gray-500 font-medium ml-2">({totalQty} items)</span>
+              Shopping Cart <span className="text-lg text-gray-500 font-medium ml-2">({totalQty || 0} items)</span>
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* CART ITEMS LIST */}
-            <div className="flex-1 space-y-4">
-              {cart?.map((item) => (
-                <div
-                  key={item.productId}
-                  className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center gap-6"
-                >
-                  {/* Image */}
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-gray-50 rounded-xl flex items-center justify-center p-2">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-contain mix-blend-multiply"
-                    />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 w-full text-center sm:text-left">
-                    <h3 className="text-xl font-bold text-gray-800 mb-1">
-                      {item.name}
-                    </h3>
-                    <p className="text-[#be5b4c] font-bold text-lg">
-                      ₹{item.price}
-                    </p>
-                  </div>
-
-                  {/* Controls */}
-                  <div className="flex flex-col items-center gap-4 sm:flex-row">
-                    {/* Quantity */}
-                    <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-1">
-                      <button
-                        onClick={() => updateQty(item.productId, "dec")}
-                        className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 hover:text-[#be5b4c] transition font-bold"
-                      >
-                        <FontAwesomeIcon icon={faMinus} size="sm" />
-                      </button>
-                      <span className="font-bold text-gray-800 w-6 text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQty(item.productId, "inc")}
-                        className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 hover:text-[#be5b4c] transition font-bold"
-                      >
-                        <FontAwesomeIcon icon={faPlus} size="sm" />
-                      </button>
-                    </div>
-
-                    {/* Subtotal */}
-                    <div className="text-right min-w-[80px]">
-                      <p className="text-xs text-gray-500">Subtotal</p>
-                      <p className="font-bold text-gray-900">₹{item.subtotal}</p>
-                    </div>
-                  </div>
-
-                  {/* Delete */}
-                  <button
-                    onClick={() => deleteItem(item.productId)}
-                    className="text-gray-400 hover:text-red-500 transition p-2"
+          {/* CART SECTION */}
+          {cart?.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center mb-12">
+              <FontAwesomeIcon icon={faCartShopping} className="text-7xl text-gray-200 mb-6" />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Your Cart is Empty
+              </h2>
+              <p className="text-gray-500 mb-6">
+                Looks like you haven't added anything to your cart yet.
+              </p>
+              <button
+                onClick={() => navigate("/")}
+                className="bg-[#be5b4c] text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-[#a0493d] transition-all"
+              >
+                Start Shopping
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col lg:flex-row gap-8 mb-12">
+              {/* CART ITEMS LIST */}
+              <div className="flex-1 space-y-4">
+                {cart?.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center gap-6"
                   >
-                    <FontAwesomeIcon icon={faTrash} className="text-lg" />
+                    {/* Image */}
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-gray-50 rounded-xl flex items-center justify-center p-2">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-contain mix-blend-multiply"
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 w-full text-center sm:text-left">
+                      <h3 className="text-xl font-bold text-gray-800 mb-1">
+                        {item.name}
+                      </h3>
+                      <p className="text-[#be5b4c] font-bold text-lg">
+                        ₹{item.price}
+                      </p>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex flex-col items-center gap-4 sm:flex-row">
+                      {/* Quantity */}
+                      <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-1">
+                        <button
+                          onClick={() => updateQty(item.productId, "dec")}
+                          className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 hover:text-[#be5b4c] transition font-bold"
+                        >
+                          <FontAwesomeIcon icon={faMinus} size="sm" />
+                        </button>
+                        <span className="font-bold text-gray-800 w-6 text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQty(item.productId, "inc")}
+                          className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 hover:text-[#be5b4c] transition font-bold"
+                        >
+                          <FontAwesomeIcon icon={faPlus} size="sm" />
+                        </button>
+                      </div>
+
+                      {/* Subtotal */}
+                      <div className="text-right min-w-[80px]">
+                        <p className="text-xs text-gray-500">Subtotal</p>
+                        <p className="font-bold text-gray-900">₹{item.subtotal}</p>
+                      </div>
+                    </div>
+
+                    {/* Delete */}
+                    <button
+                      onClick={() => deleteItem(item.productId)}
+                      className="text-gray-400 hover:text-red-500 transition p-2"
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="text-lg" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* CHECKOUT SUMMARY */}
+              <div className="lg:w-96">
+                <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 sticky top-24">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                    Order Summary
+                  </h2>
+
+                  <div className="space-y-4 mb-6">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Subtotal</span>
+                      <span className="font-medium">₹{cartTotal}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Shipping</span>
+                      <span className="text-green-600 font-medium">Free</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-4 mb-8">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xl font-bold text-gray-900">Total</span>
+                      <span className="text-2xl font-bold text-[#be5b4c]">
+                        ₹{(cartTotal).toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 text-right">Including VAT</p>
+                  </div>
+
+                  <button
+                    onClick={() => setShowPayment(true)}
+                    className="w-full bg-[#be5b4c] text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-[#a0493d] hover:shadow-xl transition-all active:scale-[0.98]"
+                  >
+                    Proceed to Checkout
                   </button>
                 </div>
-              ))}
-            </div>
-
-            {/* CHECKOUT SUMMARY */}
-            <div className="lg:w-96">
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 sticky top-24">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  Order Summary
-                </h2>
-
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Subtotal</span>
-                    <span className="font-medium">₹{cartTotal}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Shipping</span>
-                    <span className="text-green-600 font-medium">Free</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-4 mb-8">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xl font-bold text-gray-900">Total</span>
-                    <span className="text-2xl font-bold text-[#be5b4c]">
-                      ₹{(cartTotal).toFixed(2)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1 text-right">Including VAT</p>
-                </div>
-
-                <button
-                  onClick={() => setShowPayment(true)}
-                  className="w-full bg-[#be5b4c] text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-[#a0493d] hover:shadow-xl transition-all active:scale-[0.98]"
-                >
-                  Proceed to Checkout
-                </button>
               </div>
             </div>
+          )}
+
+          {/* ORDER HISTORY SECTION */}
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <div className="flex items-center gap-3 mb-6">
+              <FontAwesomeIcon icon={faHistory} className="text-2xl text-[#be5b4c]" />
+              <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
+            </div>
+
+            {loadingHistory ? (
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+                <FontAwesomeIcon icon={faSpinner} className="text-4xl text-[#be5b4c] animate-spin mb-4" />
+                <p className="text-gray-500">Loading order history...</p>
+              </div>
+            ) : orderHistory?.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+                <FontAwesomeIcon icon={faBox} className="text-6xl text-gray-200 mb-4" />
+                <h3 className="text-xl font-bold text-gray-800 mb-2">No Orders Yet</h3>
+                <p className="text-gray-500">Your order history will appear here after your first purchase.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {orderHistory.map((order) => (
+                  <div
+                    key={order._id}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+                  >
+                    {/* Order Header */}
+                    <div className="bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 border-b border-gray-100">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Order ID</p>
+                          <p className="font-mono font-bold text-gray-800 text-sm">#{order._id.slice(-8).toUpperCase()}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Date</p>
+                          <p className="font-medium text-gray-800">{formatDate(order.createdAt)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Total</p>
+                          <p className="font-bold text-[#be5b4c] text-lg">₹{order.totalPrice?.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            Completed
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Order Items */}
+                    <div className="p-4 sm:p-6">
+                      <p className="text-sm font-medium text-gray-500 mb-4">{order.totalItems} item(s)</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {order.items.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 bg-gray-50 rounded-xl p-3"
+                          >
+                            <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center p-1 flex-shrink-0">
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-full h-full object-contain mix-blend-multiply"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-800 text-sm truncate">{item.name}</p>
+                              <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                              <p className="text-sm font-bold text-[#be5b4c]">₹{item.subtotal}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -238,7 +361,7 @@ const Cart = () => {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
                 <p className="text-gray-500 mb-4">Thank you for your order</p>
-                <p className="text-sm text-gray-400">Redirecting to homepage...</p>
+                <p className="text-sm text-gray-400">Your order history has been updated.</p>
               </div>
             ) : (
               <>
@@ -372,3 +495,4 @@ const Cart = () => {
 };
 
 export default Cart;
+

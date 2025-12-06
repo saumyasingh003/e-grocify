@@ -16,6 +16,8 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [cartTotal, setCartTotal] = useState(0);
   const [cartCount, setCartCount] = useState(0);
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const fetchCart = async () => {
     const token = localStorage.getItem("token");
@@ -92,15 +94,80 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // Checkout - creates order and clears cart
+  const checkout = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("Please login to checkout");
+    }
+
+    try {
+      const { data } = await axios.post(
+        `${API_BASE}/orders/checkout`,
+        {},
+        { headers: getAuthHeaders() }
+      );
+
+      // Clear cart state after successful checkout
+      setCart([]);
+      setCartTotal(0);
+      setCartCount(0);
+
+      // Refresh order history
+      await fetchOrderHistory();
+
+      return data;
+    } catch (error) {
+      console.error("Error during checkout:", error);
+      throw error;
+    }
+  };
+
+  // Fetch order history
+  const fetchOrderHistory = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setOrderHistory([]);
+      return;
+    }
+
+    setLoadingHistory(true);
+    try {
+      const { data } = await axios.get(`${API_BASE}/orders/history`, {
+        headers: getAuthHeaders()
+      });
+      setOrderHistory(data.orders || []);
+    } catch (error) {
+      console.error("Error fetching order history:", error);
+      setOrderHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     fetchCart();
+    fetchOrderHistory();
   }, []);
 
   return (
-    <CartContext.Provider value={{ cart, cartTotal, cartCount, addToCart, updateQty, deleteItem, fetchCart }}>
+    <CartContext.Provider value={{
+      cart,
+      cartTotal,
+      cartCount,
+      addToCart,
+      updateQty,
+      deleteItem,
+      fetchCart,
+      checkout,
+      orderHistory,
+      loadingHistory,
+      fetchOrderHistory
+    }}>
       {children}
     </CartContext.Provider>
   );
 };
 
 export const useCart = () => useContext(CartContext);
+

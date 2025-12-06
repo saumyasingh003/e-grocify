@@ -7,6 +7,7 @@ import authRoutes from "./Routes/user.js";
 import productRoutes from "./Routes/product.js";
 import recommendationRoutes from "./Routes/recomm.js";
 import cartRoutes from "./Routes/cart.js";
+import orderRoutes from "./Routes/order.js";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use("/auth", authRoutes);
 app.use("/products", productRoutes);
 app.use("/recomm", recommendationRoutes);
 app.use("/cart", cartRoutes);
+app.use("/orders", orderRoutes);
 
 // Error Handling Middleware (Correct Position)
 app.use(errorHandler);
