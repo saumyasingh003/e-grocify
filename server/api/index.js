@@ -1,13 +1,13 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import connectDB from "./config/db.js";
-import { errorHandler } from "./Middleware/errorMiddleware.js";
-import authRoutes from "./Routes/user.js";
-import productRoutes from "./Routes/product.js";
-import recommendationRoutes from "./Routes/recomm.js";
-import cartRoutes from "./Routes/cart.js";
-import orderRoutes from "./Routes/order.js";
+import connectDB from "../config/db.js";
+import { errorHandler } from "../Middleware/errorMiddleware.js";
+import authRoutes from "../Routes/user.js";
+import productRoutes from "../Routes/product.js";
+import recommendationRoutes from "../Routes/recomm.js";
+import cartRoutes from "../Routes/cart.js";
+import orderRoutes from "../Routes/order.js";
 
 dotenv.config();
 
